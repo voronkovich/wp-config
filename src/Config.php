@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Roots\WPConfig;
 
+use Roots\WPConfig\Exceptions\ConfigValueRequiredException;
 use Roots\WPConfig\Exceptions\ConstantAlreadyDefinedException;
 use Roots\WPConfig\Exceptions\UndefinedConfigKeyException;
 
@@ -16,6 +17,11 @@ class Config
      * @var array<string, mixed>
      */
     protected static $configMap = [];
+
+    /**
+     * @var array<string>
+     */
+    protected static $required = [];
 
     /**
      * @param string $key
@@ -51,6 +57,16 @@ class Config
     }
 
     /**
+     * @param string|string[] $key
+     */
+    public static function require($key): void
+    {
+        $keys = is_array($key) ? $key : [ $key ];
+
+        self::$required = array_merge(self::$required, $keys);
+    }
+
+    /**
      * define() all values in $configMap and throw an exception if we are attempting to redefine a constant.
      *
      * We throw the exception because a silent rejection of a configuration value is unacceptable. This method fails
@@ -72,10 +88,17 @@ class Config
      * // output: Fatal error: Uncaught Roots\Bedrock\ConstantAlreadyDefinedException ...
      * ```
      *
+     * @throws ConfigValueRequiredException
      * @throws ConstantAlreadyDefinedException
      */
     public static function apply(): void
     {
+        foreach (self::$required as $key) {
+            if (!isset(self::$configMap[$key]) || empty(self::$configMap[$key])) {
+                throw new ConfigValueRequiredException($key);
+            }
+        }
+
         // Scan configMap to see if user is trying to redefine any constants.
         // We do this because we don't want to 'half apply' the configMap. The user should be able to catch the
         // exception, repair their config, and run apply() again

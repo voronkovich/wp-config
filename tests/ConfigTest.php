@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Roots\WPConfig;
 
 use PHPUnit\Framework\TestCase;
+use Roots\WPConfig\Exceptions\ConfigValueRequiredException;
 use Roots\WPConfig\Exceptions\ConstantAlreadyDefinedException;
 use Roots\WPConfig\Exceptions\UndefinedConfigKeyException;
 
@@ -82,5 +83,26 @@ class ConfigTest extends TestCase
     Config::define('EXISTS', 'yep');
     Config::remove('EXISTS');
     Config::get('EXISTS');
+  }
+
+  public function testRequire()
+  {
+    $this->expectException(ConfigValueRequiredException::class);
+    $this->expectExceptionMessage('Value for "WP_HOME" required.');
+
+    Config::require('WP_HOME');
+
+    Config::apply();
+  }
+
+  public function testRequireArray()
+  {
+    $this->expectException(ConfigValueRequiredException::class);
+    $this->expectExceptionMessage('Value for "WP_SITEURL" required.');
+
+    Config::require(['WP_HOME', 'WP_SITEURL']);
+    Config::define('WP_HOME', 'https://roots.io');
+
+    Config::apply();
   }
 }
